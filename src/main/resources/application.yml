@@ -2,45 +2,47 @@
 # 数据中心智能运维支撑平台 - 本地开发配置
 # ============================================================
 # 说明：
-# 1. 当前第一阶段目标是跑通“登录 -> JWT -> 当前用户 -> RBAC 权限校验”的最小闭环。
-# 2. 为了让你不用先安装 MySQL，本阶段使用 H2 内存数据库模拟真实表结构。
-# 3. 后续进入资源台账模块时，再切换到 MySQL + MyBatis-Plus，并保留同样的表设计思想。
+# 1. 第二阶段切换为 MySQL + MyBatis-Plus，正式对接真实数据库。
+# 2. spring.sql.init 保留，启动时仍会执行 schema.sql 和 data.sql 初始化结构和数据。
+# 3. MyBatis-Plus 逻辑删除、驼峰映射等全局配置统一在 mybatis-plus 节配置。
 
 server:
-  # 本地开发端口。后续 Apifox、浏览器或 curl 都访问 http://localhost:8080。
   port: 8081
 
 spring:
   application:
-    # 应用名会出现在日志、监控和服务标识里，名字要能看出项目用途。
     name: datacenter-ops-platform
 
   datasource:
-    # H2 驱动。第一阶段用内存库，重启后数据会重新由 schema.sql 和 data.sql 初始化。
-    driver-class-name: org.h2.Driver
-    # MODE=MySQL 让 H2 尽量兼容 MySQL 语法，方便后续迁移到真实 MySQL。
-    # DB_CLOSE_DELAY=-1 表示应用运行期间保持内存库不关闭。
-    url: jdbc:h2:mem:ops_platform;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
-    # H2 本地默认用户名。这里不是生产账号，不包含真实敏感信息。
-    username: sa
-    password:
-
-  h2:
-    console:
-      # 开启 H2 控制台，方便课堂上直接查看 sys_user、sys_role、sys_permission 等表。
-      enabled: true
-      # 控制台地址：http://localhost:8080/h2-console
-      path: /h2-console
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/ops_platform?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    username: root
+    password: 123456
 
   sql:
     init:
-      # 每次启动都执行 schema.sql 和 data.sql，保证课堂演示数据稳定可复现。
+      # always：每次启动都执行，保证本地开发环境数据稳定可复现。
+      # 生产环境应改为 never，由 Flyway/Liquibase 管理变更。
       mode: always
+      # 指定 schema 和 data 脚本路径（默认就是这两个，显式写出更清晰）
+      schema-locations: classpath:schema.sql
+      data-locations: classpath:data.sql
+
+mybatis-plus:
+  configuration:
+    # 开启驼峰命名自动映射：数据库 real_name -> Java realName
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      # 逻辑删除字段名（对应各表的 deleted 列）
+      logic-delete-field: deleted
+      # 未删除的值
+      logic-not-delete-value: 0
+      # 已删除的值
+      logic-delete-value: 1
 
 app:
   jwt:
-    # 本地演示用 JWT 签名密钥。
-    # 注意：真实项目绝不能把生产 secret 写在 yml 里，必须通过环境变量或配置中心注入。
     secret: local-demo-secret-change-me-local-demo-secret
-    # token 过期时间，单位分钟。第一阶段设为 120 分钟，避免课堂调试时频繁过期。
     expire-minutes: 120
