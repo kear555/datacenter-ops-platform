@@ -1,0 +1,46 @@
+# ============================================================
+# 数据中心智能运维支撑平台 - 本地开发配置
+# ============================================================
+# 说明：
+# 1. 当前第一阶段目标是跑通“登录 -> JWT -> 当前用户 -> RBAC 权限校验”的最小闭环。
+# 2. 为了让你不用先安装 MySQL，本阶段使用 H2 内存数据库模拟真实表结构。
+# 3. 后续进入资源台账模块时，再切换到 MySQL + MyBatis-Plus，并保留同样的表设计思想。
+
+server:
+  # 本地开发端口。后续 Apifox、浏览器或 curl 都访问 http://localhost:8080。
+  port: 8081
+
+spring:
+  application:
+    # 应用名会出现在日志、监控和服务标识里，名字要能看出项目用途。
+    name: datacenter-ops-platform
+
+  datasource:
+    # H2 驱动。第一阶段用内存库，重启后数据会重新由 schema.sql 和 data.sql 初始化。
+    driver-class-name: org.h2.Driver
+    # MODE=MySQL 让 H2 尽量兼容 MySQL 语法，方便后续迁移到真实 MySQL。
+    # DB_CLOSE_DELAY=-1 表示应用运行期间保持内存库不关闭。
+    url: jdbc:h2:mem:ops_platform;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    # H2 本地默认用户名。这里不是生产账号，不包含真实敏感信息。
+    username: sa
+    password:
+
+  h2:
+    console:
+      # 开启 H2 控制台，方便课堂上直接查看 sys_user、sys_role、sys_permission 等表。
+      enabled: true
+      # 控制台地址：http://localhost:8080/h2-console
+      path: /h2-console
+
+  sql:
+    init:
+      # 每次启动都执行 schema.sql 和 data.sql，保证课堂演示数据稳定可复现。
+      mode: always
+
+app:
+  jwt:
+    # 本地演示用 JWT 签名密钥。
+    # 注意：真实项目绝不能把生产 secret 写在 yml 里，必须通过环境变量或配置中心注入。
+    secret: local-demo-secret-change-me-local-demo-secret
+    # token 过期时间，单位分钟。第一阶段设为 120 分钟，避免课堂调试时频繁过期。
+    expire-minutes: 120
